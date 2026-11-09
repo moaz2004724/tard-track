@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>طَرد | متابعة الشحنة</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Arabic", "Segoe UI", Tahoma, sans-serif; }
+    body { margin: 0; background: #F4F5F7; color: #111214; padding: 16px 14px 36px; -webkit-font-smoothing: antialiased; }
+    .wrap { max-width: 460px; margin: 0 auto; }
+    .brand { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding: 4px 4px; }
+    .brand-logo { display: flex; align-items: center; gap: 8px; }
+    .brand-icon { width: 34px; height: 34px; border-radius: 10px; background: #BEF526; color: #111214; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; }
+    .brand-title { font-size: 20px; font-weight: 900; color: #111214; }
+    .brand-sub { font-size: 12px; color: #6B7078; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #18A957; display: inline-block; animation: pulse 1.8s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.85); } }
+    .hero { background: #111214; color: #fff; border-radius: 28px; padding: 22px; box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
+    .badge { display: inline-block; background: #BEF526; color: #111214; font-weight: 800; font-size: 13px; padding: 6px 14px; border-radius: 99px; }
+    .ref { font-size: 26px; font-weight: 900; margin: 12px 0 4px; direction: ltr; text-align: right; letter-spacing: 0.5px; }
+    .route { color: #D5D8DF; font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+    .code-box { background: #1C1E22; border: 2px solid #BEF526; border-radius: 22px; padding: 18px 16px; text-align: center; margin-top: 14px; }
+    .code-title { font-size: 13px; color: #BEF526; font-weight: 800; margin-bottom: 6px; }
+    .code-val { font-size: 36px; font-weight: 900; letter-spacing: 4px; color: #fff; direction: ltr; margin: 4px 0; }
+    .code-sub { font-size: 12px; color: #A6AAB2; margin-top: 6px; line-height: 1.45; }
+    .copy-btn { margin-top: 12px; background: #BEF526; color: #111214; border: none; border-radius: 99px; padding: 10px 20px; font-size: 13px; font-weight: 800; cursor: pointer; }
+    .card { background: #fff; border-radius: 22px; padding: 18px; margin-top: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
+    .card-title { font-size: 14px; font-weight: 800; color: #6B7078; margin-bottom: 12px; }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #F0F1F4; font-size: 14px; gap: 12px; }
+    .row:last-child { border-bottom: none; padding-bottom: 0; }
+    .lbl { color: #6B7078; font-weight: 600; }
+    .val { font-weight: 800; color: #111214; text-align: left; }
+    .steps { display: flex; flex-direction: column; gap: 12px; }
+    .step { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: #8A8F99; }
+    .step.done { color: #111214; }
+    .dot { width: 24px; height: 24px; border-radius: 50%; background: #ECEEF2; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; flex-shrink: 0; }
+    .step.done .dot { background: #BEF526; color: #111214; }
+    .call-btn { display: block; width: 100%; text-align: center; background: #111214; color: #BEF526; text-decoration: none; font-weight: 800; font-size: 14px; padding: 13px; border-radius: 16px; margin-top: 12px; }
+    .footer { text-align: center; color: #8A8F99; font-size: 12px; margin-top: 20px; }
+    .loading { text-align: center; padding: 48px 20px; color: #6B7078; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-logo">
+        <div class="brand-icon">ط</div>
+        <div class="brand-title">طَرد</div>
+      </div>
+      <div class="brand-sub"><span class="live-dot"></span> متابعة مباشرة للشحنة</div>
+    </div>
+    <div id="app" class="card loading">جاري تحميل بيانات الشحنة...</div>
+    <div class="footer">يتحدث تلقائياً كل بضع ثوانٍ · تطبيق طَرد للشحن بين المحافظات</div>
+  </div>
+
+  <script>
+    const API_BASE = "https://uryqxdttpylsaprkhqau.supabase.co/functions/v1/track";
+
+    function fmtCode(c) {
+      if (!c) return "—";
+      const s = String(c).replace(/\s+/g, "");
+      return s.length === 6 ? s.slice(0, 3) + " " + s.slice(3) : s;
+    }
+
+    function esc(s) {
+      return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function copyCode(code, btn) {
+      navigator.clipboard.writeText(code).then(() => {
+        const old = btn.textContent;
+        btn.textContent = "✓ تم نسخ الكود";
+        setTimeout(() => { btn.textContent = old; }, 2000);
+      }).catch(() => {});
+    }
+
+    function render(d) {
+      const app = document.getElementById("app");
+      if (!d || d.error || !d.shipment) {
+        app.className = "card";
+        app.innerHTML = '<div style="text-align:center;padding:24px 8px">' +
+          '<div style="font-size:18px;font-weight:900;margin-bottom:8px">لم نجد شحنة بهذا الرقم</div>' +
+          '<div style="color:#6B7078;font-size:14px">تأكد من رابط المتابعة أو رقم الشحنة المرسل لك من المرسل.</div>' +
+          '</div>';
+        return;
+      }
+      const sh = d.shipment;
+      document.title = "طَرد | متابعة الشحنة #" + sh.reference;
+      const stepIdx = d.stepIdx || 1;
+      const steps = [
+        { label: "تم إنشاء الشحنة وتسجيل بيانات المستلم", done: stepIdx >= 1 },
+        { label: "تم حجز الرحلة مع السائق على الخط", done: stepIdx >= 2 },
+        { label: "السائق استلم الطرد وفي الطريق للموقف", done: stepIdx >= 3 },
+        { label: "تم تسليم الطرد للمستلم بنجاح", done: stepIdx >= 4 },
+      ];
+
+      let driverHtml = "";
+      if (d.driver) {
+        const dr = d.driver;
+        driverHtml = '<div class="card">' +
+          '<div class="card-title">بيانات السائق والعربية</div>' +
+          '<div class="row"><span class="lbl">اسم السائق</span><span class="val">' + esc(dr.name || "سائق على الخط") + '</span></div>' +
+          (dr.phone ? '<div class="row"><span class="lbl">رقم موبايل السائق</span><span class="val" dir="ltr">' + esc(dr.phone) + '</span></div>' : '') +
+          (dr.vehicle ? '<div class="row"><span class="lbl">العربية واللوحة</span><span class="val">' + esc(dr.vehicle) + '</span></div>' : '') +
+          (dr.phone ? '<a class="call-btn" href="tel:' + esc(dr.phone) + '">اتصال مباشر بالسائق</a>' : '') +
+          '</div>';
+      }
+
+      app.className = "";
+      app.innerHTML =
+        '<div class="hero">' +
+          '<span class="badge">' + esc(d.statusLabel || "قيد المتابعة") + '</span>' +
+          '<div class="ref">#' + esc(sh.reference) + '</div>' +
+          '<div class="route">' + esc(d.routeLabel || "") + '</div>' +
+          '<div class="code-box">' +
+            '<div class="code-title">كود استلام المستلم (أعطِه للسائق عند الاستلام فقط)</div>' +
+            '<div class="code-val">' + esc(fmtCode(sh.deliveryCode)) + '</div>' +
+            '<div class="code-sub">لا تعطِ هذا الكود للسائق إلا بعد استلام الطرد في يدك والتأكد منه</div>' +
+            (sh.deliveryCode ? '<button class="copy-btn" onclick="copyCode(\'' + esc(sh.deliveryCode) + '\', this)">نسخ كود الاستلام</button>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="card">' +
+          '<div class="card-title">مراحل الشحنة</div>' +
+          '<div class="steps">' +
+            steps.map((s, idx) =>
+              '<div class="step ' + (s.done ? 'done' : '') + '">' +
+                '<div class="dot">' + (s.done ? '✓' : (idx + 1)) + '</div>' +
+                '<div>' + esc(s.label) + '</div>' +
+              '</div>'
+            ).join('') +
+          '</div>' +
+        '</div>' +
+        driverHtml +
+        '<div class="card">' +
+          '<div class="card-title">تفاصيل الطرد</div>' +
+          '<div class="row"><span class="lbl">المستلم</span><span class="val">' + esc(sh.receiverName || "—") + '</span></div>' +
+          '<div class="row"><span class="lbl">موبايل المستلم</span><span class="val" dir="ltr">' + esc(sh.receiverPhone || "—") + '</span></div>' +
+          '<div class="row"><span class="lbl">المحتوى</span><span class="val">' + esc(sh.content || "طرد") + '</span></div>' +
+          '<div class="row"><span class="lbl">الوزن التقريبي</span><span class="val">' + esc(sh.weightKg ?? "—") + ' كجم</span></div>' +
+          '<div class="row"><span class="lbl">قيمة التوصيل</span><span class="val">' + esc(d.priceEgp ?? sh.offeredPriceEgp ?? "—") + ' ج.م</span></div>' +
+        '</div>';
+    }
+
+    function decodeInitialHash() {
+      try {
+        const hash = location.hash.replace(/^#/, "");
+        if (!hash) return null;
+        const params = new URLSearchParams(hash);
+        const b64 = params.get("d");
+        if (!b64) return null;
+        const bin = atob(b64.replace(/-/g, "+").replace(/_/g, "/"));
+        const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+        const json = new TextDecoder().decode(bytes);
+        return JSON.parse(json);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    const params = new URLSearchParams(location.search);
+    const ref = (params.get("ref") || "").trim().toUpperCase();
+    const initial = decodeInitialHash();
+    if (initial) {
+      render(initial);
+    }
+
+    async function refresh() {
+      if (!ref) {
+        if (!initial) render({ error: "missing_ref" });
+        return;
+      }
+      try {
+        const res = await fetch(API_BASE + "?ref=" + encodeURIComponent(ref) + "&format=json", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          render(data);
+        }
+      } catch (e) {}
+    }
+
+    refresh();
+    setInterval(refresh, 8000);
+  </script>
+</body>
+</html>
